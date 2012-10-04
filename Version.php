@@ -25,7 +25,7 @@ class Version {
 	* @return string
 	*/
 	public static function getVersionsTable() {
-		return Config::get('version.table',static::$table);
+		return Config::get('version.table',Config::get('Version::version.table',static::$table));
 	}
 
 	
