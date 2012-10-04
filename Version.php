@@ -22,11 +22,10 @@ class Version {
 	* Get the table name, where we will save the versions
 	* from the Laravel config
 	*
-	* @return void
+	* @return string
 	*/
 	public static function getVersionsTable() {
-		$cfg = Config::get('version');
-		return $cfg['table'];
+		return Config::get('version.table',static::$table);
 	}
 
 	
@@ -73,6 +72,7 @@ class Version {
 	}
 
 
+
 	
 	/**
 	* Loads a specific saved version by its primary key
@@ -89,13 +89,17 @@ class Version {
 
 
 	/**
-	* Get all versions of an object
-	*
-	* @param string $obj
-	* @return void
+	* Get all versions of an object as an array of stdClass objects
+	* 
+	* @param Model $obj
+	* @return array
 	*/
 	public static function all($obj) {
-		return DB::table(Version::getVersionsTable())->where('object_id', '=', $obj->attributes['id'])->where('object_table', '=', strtolower(get_class($obj)))->order_by('updated_at', 'desc')->get();
+		$objs = static::query($obj)->order_by('updated_at', 'desc')->get();
+		array_walk($objs, function(&$val){
+		    $val->object = json_decode($val->data);
+		});
+		return $objs;
 	}
 
 
@@ -103,11 +107,11 @@ class Version {
 	/**
 	* How many versions are saved for a given object? 
 	*
-	* @param string $obj
-	* @return void
+	* @param Model $obj
+	* @return int
 	*/
 	public static function count($obj) {
-		return DB::table(Version::getVersionsTable())->where('object_id', '=', $obj->attributes['id'])->where('object_table', '=', strtolower(get_class($obj)))->count();
+		return static::query($obj)->count();
 	}
 
 
@@ -115,11 +119,13 @@ class Version {
 	/**
 	* Retrieve the most recent version of an object
 	*
-	* @param string $obj
-	* @return void
+	* @param Model $obj
+	* @return object
 	*/
 	public static function latest($obj) {
-		return DB::table(Version::getVersionsTable())->where('object_id', '=', $obj->attributes['id'])->where('object_table', '=', strtolower(get_class($obj)))->order_by('created_at', 'desc')->first();
+		$obj = static::query($obj)->order_by('created_at', 'desc')->first();
+		$obj->object = json_decode($obj->data);
+		return $obj;
 	}
 
 
@@ -128,26 +134,36 @@ class Version {
 	* Delete a version of an object
 	*
 	* @param int $version_id
-	* @return void
+	* @return bool
 	*/
 	public static function delete($version_id) {
 		return DB::table(Version::getVersionsTable())->delete($version_id);
 	}
 
 
+
 	/**
 	* Delete all versions of an object
 	*
-	* @param string $obj
-	* @return void
+	* @param Model $obj
+	* @return bool
 	*/
 	
 	public static function deleteAll($obj) {
-		return DB::table(Version::getVersionsTable())->where('object_id', '=', $obj->attributes['id'])->where('object_table', '=', strtolower(get_class($obj)))->delete();
+        return static::query($obj)->delete();
 	}
-	
-	
-	
+
+
+
+    /**
+     * Build base query for versions of the supplied object.
+     * 
+     * @param $obj
+     * @return Laravel\Database\Query
+     */
+    protected static function query($obj) {
+        return DB::table(Version::getVersionsTable())->where('object_id', '=', $obj->attributes['id'])->where('object_table', '=', strtolower(get_class($obj)));
+	}
 
 }
 
