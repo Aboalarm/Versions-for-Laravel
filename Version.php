@@ -73,6 +73,23 @@ class Version {
 
 
 
+    /**
+     * Save a version of the object only if the object has already been saved to DB and 
+     * it has has been modified from original.
+     * Version::add() will prevent duplicates via a unique index in the DB. This method
+     * relies on the Model::$exists and Model::dirty().  Therefore, this method can be 
+     * called safely without an unnecessary hit on the DB.
+     * 
+     * @param Model $obj
+     * @return bool
+     */
+    public static function addIfChanged($obj)
+    {
+        if($obj->exists AND $obj->dirty()) return static::add($obj);
+        else return false;
+    }
+
+
 	
 	/**
 	* Loads a specific saved version by its primary key
